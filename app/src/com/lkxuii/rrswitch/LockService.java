@@ -48,8 +48,8 @@ public class LockService extends Service {
         Notification.Builder b = Build.VERSION.SDK_INT >= 26
                 ? new Notification.Builder(this, CHANNEL)
                 : new Notification.Builder(this);
-        Notification n = b.setContentTitle("刷新率已锁定")
-                .setContentText("闲时保持 60Hz，每 20 秒校准")
+        Notification n = b.setContentTitle("全局锁定 60Hz")
+                .setContentText("所有场景保持 60Hz，每 20 秒校准")
                 .setSmallIcon(R.drawable.ic_launcher)
                 .setOngoing(true)
                 .build();
@@ -78,7 +78,10 @@ public class LockService extends Service {
                             String[].class, String[].class, String.class);
                     m.setAccessible(true);
                     Process p = (Process) m.invoke(null, new String[]{"/system/bin/sh", "-c",
-                            "settings put global force_pad_floor_fps 0; sleep 0.2; "
+                            // rate_mode=4 保持智能模式（活动可高刷），
+                            // floor 用 0→60 强制制造变化，否则服务状态衰减时写相同值不生效
+                            "settings put secure oplus_customize_screen_refresh_rate 4; "
+                                    + "settings put global force_pad_floor_fps 0; sleep 0.2; "
                                     + "settings put global force_pad_floor_fps 60"}, null, null);
                     p.waitFor();
                 } catch (Throwable ignored) {

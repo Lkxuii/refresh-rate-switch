@@ -175,7 +175,7 @@
             android:layout_marginTop="10dp"
             android:background="@drawable/bg_btn_secondary"
             android:gravity="center"
-            android:text="保持锁定：关"
+            android:text="保持静止 60Hz：关"
             android:textColor="#B0B0BA"
             android:textSize="14sp" />
 

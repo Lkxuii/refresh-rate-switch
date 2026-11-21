@@ -506,12 +506,12 @@ public class MainActivity extends Activity {
         openWriteSettingsPage();
     }
 
-    /** 开关锁定服务。force_pad_floor_fps 的生效状态会被系统覆盖，需要定期重写。 */
+    /** 开关锁定服务：定期重写 floor，让静止时稳定保持 60Hz，活动时仍走高刷。 */
     private void toggleLock() {
         if (lockRunning) {
             stopService(new android.content.Intent(this, LockService.class));
             lockRunning = false;
-            toast("已停止锁定，闲时可能回到 50Hz");
+            toast("已停止锁定，静止时可能回到 50Hz");
         } else {
             if (idleRate <= 50) {
                 toast("闲时为 50Hz 时无需锁定");
@@ -522,15 +522,9 @@ public class MainActivity extends Activity {
                 updatePermUi();
                 return;
             }
-            if (android.os.Build.VERSION.SDK_INT >= 33
-                    && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
-                requestPermissions(
-                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 300);
-            }
             startForegroundService(new android.content.Intent(this, LockService.class));
             lockRunning = true;
-            toast("已开启锁定（常驻通知，每 20 秒校准）");
+            toast("已开启锁定：静止保持 60Hz，活动仍走高刷");
         }
         updateLockUi();
     }
@@ -538,7 +532,7 @@ public class MainActivity extends Activity {
     private void updateLockUi() {
         TextView btn = (TextView) findViewById(R.id.btn_lock);
         if (btn == null) return;
-        btn.setText(lockRunning ? "保持锁定：开（点此关闭）" : "保持锁定：关");
+        btn.setText(lockRunning ? "保持静止 60Hz：开（点此关闭）" : "保持静止 60Hz：关");
         btn.setTextColor(lockRunning ? 0xFF4CD07D : 0xFFB0B0BA);
     }
 
