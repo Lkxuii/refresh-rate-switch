@@ -78,7 +78,7 @@ public class LockService extends Service {
                         if (handler != null) {
                             // 等系统完成亮屏后的模式初选，再覆盖它
                             handler.postDelayed(new Runnable() {
-                                @Override public void run() { reapply(); }
+                                @Override public void run() { reapply(true); }
                             }, 600);
                         }
                     }
@@ -101,7 +101,7 @@ public class LockService extends Service {
         if (task == null) {
             task = new Runnable() {
                 @Override public void run() {
-                    reapply();
+                    reapply(false);
                     if (handler != null) handler.postDelayed(this, INTERVAL_MS);
                 }
             };
@@ -126,6 +126,8 @@ public class LockService extends Service {
 
     /** 检测前台应用是否变化，变化时立即校准。依赖 UsageStats，未授权时静默跳过。 */
     private void checkForeground() {
+        // 无障碍已开启时由 AppSwitchService 实时接管，这里跳过，避免重复写入
+        if (accessibilityActive()) return;
         try {
             android.app.usage.UsageStatsManager usm =
                     (android.app.usage.UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
@@ -144,14 +146,34 @@ public class LockService extends Service {
             }
             if (top != null && !top.equals(lastPkg)) {
                 lastPkg = top;
-                reapply();
+                reapply(true);
             }
         } catch (Throwable ignored) {
         }
     }
 
-    private void reapply() {
-        RrApply.apply();
+    /** 无障碍服务是否真的在运行（不能用 enabled_accessibility_services 判断） */
+    private boolean accessibilityActive() {
+        try {
+            android.view.accessibility.AccessibilityManager am =
+                    (android.view.accessibility.AccessibilityManager)
+                            getSystemService(ACCESSIBILITY_SERVICE);
+            if (am == null) return false;
+            java.util.List<android.accessibilityservice.AccessibilityServiceInfo> list =
+                    am.getEnabledAccessibilityServiceList(
+                            android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
+            if (list == null) return false;
+            for (android.accessibilityservice.AccessibilityServiceInfo info : list) {
+                String id = info.getId();
+                if (id != null && id.startsWith(getPackageName())) return true;
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
+    private void reapply(boolean force) {
+        RrApply.apply(force);
     }
 
     @Override
