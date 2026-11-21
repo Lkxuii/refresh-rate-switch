@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#0B0B0D"
+    android:background="#381E72"
     android:fillViewport="true"
     android:scrollbars="none">
 
@@ -31,7 +31,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="刷新率控制"
-                    android:textColor="#F2F2F5"
+                    android:textColor="#E6E0E9"
                     android:textSize="26sp"
                     android:textStyle="bold" />
 
@@ -41,7 +41,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginTop="4dp"
                     android:text="OnePlus Pad 2 Pro · OPD2413"
-                    android:textColor="#6E6E7A"
+                    android:textColor="#938F99"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -66,7 +66,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:text="当前实际刷新率"
-                android:textColor="#6E6E7A"
+                android:textColor="#938F99"
                 android:textSize="11sp"
                 android:letterSpacing="0.12" />
 
@@ -82,7 +82,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:text="--"
-                    android:textColor="#4C8DFF"
+                    android:textColor="#D0BCFF"
                     android:textSize="62sp"
                     android:textStyle="bold"
                     android:includeFontPadding="false" />
@@ -93,7 +93,7 @@
                     android:layout_marginLeft="8dp"
                     android:layout_marginBottom="10dp"
                     android:text="Hz"
-                    android:textColor="#6E6E7A"
+                    android:textColor="#938F99"
                     android:textSize="18sp" />
             </LinearLayout>
 
@@ -103,7 +103,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="10dp"
                 android:text="活动 -- Hz  ·  闲时 -- Hz"
-                android:textColor="#8A8A95"
+                android:textColor="#CAC4D0"
                 android:textSize="13sp" />
         </LinearLayout>
 
@@ -112,7 +112,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="26dp"
             android:text="活动刷新率"
-            android:textColor="#F2F2F5"
+            android:textColor="#E6E0E9"
             android:textSize="15sp"
             android:textStyle="bold" />
 
@@ -121,7 +121,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:text="滑动、动画、视频播放时的上限"
-            android:textColor="#6E6E7A"
+            android:textColor="#938F99"
             android:textSize="12sp" />
 
         <LinearLayout
@@ -136,7 +136,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="26dp"
             android:text="闲时刷新率"
-            android:textColor="#F2F2F5"
+            android:textColor="#E6E0E9"
             android:textSize="15sp"
             android:textStyle="bold" />
 
@@ -146,7 +146,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="3dp"
             android:text="静止无操作时的下限 · 系统只支持 50 / 60 两档"
-            android:textColor="#6E6E7A"
+            android:textColor="#938F99"
             android:textSize="12sp" />
 
         <LinearLayout
@@ -164,7 +164,7 @@
             android:background="@drawable/bg_btn_primary"
             android:gravity="center"
             android:text="应用设置"
-            android:textColor="#0B0B0D"
+            android:textColor="#381E72"
             android:textSize="16sp"
             android:textStyle="bold" />
 
@@ -176,7 +176,7 @@
             android:background="@drawable/bg_btn_secondary"
             android:gravity="center"
             android:text="保持静止 60Hz：关"
-            android:textColor="#B0B0BA"
+            android:textColor="#CAC4D0"
             android:textSize="14sp" />
 
         <TextView
@@ -187,7 +187,7 @@
             android:background="@drawable/bg_btn_secondary"
             android:gravity="center"
             android:text="无障碍监听：检测中…"
-            android:textColor="#B0B0BA"
+            android:textColor="#CAC4D0"
             android:textSize="14sp" />
 
         <TextView
@@ -198,7 +198,7 @@
             android:background="@drawable/bg_btn_secondary"
             android:gravity="center"
             android:text="跳过校准的应用：0"
-            android:textColor="#B0B0BA"
+            android:textColor="#CAC4D0"
             android:textSize="14sp" />
 
         <LinearLayout
@@ -215,7 +215,7 @@
                 android:background="@drawable/bg_btn_secondary"
                 android:gravity="center"
                 android:text="强制重算"
-                android:textColor="#B0B0BA"
+                android:textColor="#CAC4D0"
                 android:textSize="14sp" />
 
             <View
@@ -230,7 +230,7 @@
                 android:background="@drawable/bg_btn_secondary"
                 android:gravity="center"
                 android:text="恢复默认"
-                android:textColor="#B0B0BA"
+                android:textColor="#CAC4D0"
                 android:textSize="14sp" />
 
             <View
@@ -245,7 +245,7 @@
                 android:background="@drawable/bg_btn_secondary"
                 android:gravity="center"
                 android:text="授权权限"
-                android:textColor="#4C8DFF"
+                android:textColor="#D0BCFF"
                 android:textSize="14sp"
                 android:visibility="gone" />
         </LinearLayout>
@@ -256,7 +256,7 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="18dp"
             android:text="通过 Shizuku 调用系统 shell 修改 settings，无需 root。"
-            android:textColor="#5A5A66"
+            android:textColor="#49454F"
             android:textSize="11sp"
             android:lineSpacingExtra="3dp" />
     </LinearLayout>

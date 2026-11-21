@@ -584,7 +584,7 @@ public class MainActivity extends Activity {
         TextView btn = (TextView) findViewById(R.id.btn_lock);
         if (btn == null) return;
         btn.setText(lockRunning ? "保持静止 60Hz：开（点此关闭）" : "保持静止 60Hz：关");
-        btn.setTextColor(lockRunning ? 0xFF4CD07D : 0xFFB0B0BA);
+        btn.setTextColor(lockRunning ? 0xFF4CD07D : 0xFFCAC4D0);
     }
 
     @Override
@@ -634,7 +634,7 @@ public class MainActivity extends Activity {
             btn.setTextColor(0xFF4CD07D);
         } else {
             btn.setText("无障碍监听：未开启（点此开启）");
-            btn.setTextColor(0xFFB0B0BA);
+            btn.setTextColor(0xFFCAC4D0);
         }
     }
 
@@ -642,55 +642,73 @@ public class MainActivity extends Activity {
     private void showWhitelistDialog() {
         try {
             final android.content.pm.PackageManager pm = getPackageManager();
-            java.util.List<android.content.pm.ApplicationInfo> all = pm.getInstalledApplications(0);
-            java.util.List<android.content.pm.ApplicationInfo> list = new java.util.ArrayList<>();
-            for (android.content.pm.ApplicationInfo ai : all) {
-                if (pm.getLaunchIntentForPackage(ai.packageName) != null) list.add(ai);
-            }
-            java.util.Collections.sort(list,
+            // 扫描全部应用（不再只保留有启动图标的），排序时用户应用在前
+            final java.util.List<android.content.pm.ApplicationInfo> all =
+                    new java.util.ArrayList<>(pm.getInstalledApplications(0));
+            java.util.Collections.sort(all,
                     new java.util.Comparator<android.content.pm.ApplicationInfo>() {
                         @Override
                         public int compare(android.content.pm.ApplicationInfo a,
                                            android.content.pm.ApplicationInfo b) {
+                            boolean sa = (a.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
+                            boolean sb = (b.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
+                            if (sa != sb) return sa ? 1 : -1;
                             return pm.getApplicationLabel(a).toString()
-                                    .compareTo(pm.getApplicationLabel(b).toString());
+                                    .compareToIgnoreCase(pm.getApplicationLabel(b).toString());
                         }
                     });
 
-            final int n = list.size();
-            final String[] names = new String[n];
-            final String[] pkgs = new String[n];
-            final boolean[] checked = new boolean[n];
-            java.util.Set<String> wl = getSharedPreferences("rr", MODE_PRIVATE)
-                    .getStringSet("whitelist", java.util.Collections.<String>emptySet());
-            for (int i = 0; i < n; i++) {
-                android.content.pm.ApplicationInfo ai = list.get(i);
-                names[i] = pm.getApplicationLabel(ai).toString();
-                pkgs[i] = ai.packageName;
-                checked[i] = wl.contains(ai.packageName);
-            }
+            final java.util.Set<String> selected = new java.util.HashSet<>(
+                    getSharedPreferences("rr", MODE_PRIVATE)
+                            .getStringSet("whitelist", java.util.Collections.<String>emptySet()));
+
+            final java.util.List<android.content.pm.ApplicationInfo> filtered =
+                    new java.util.ArrayList<>(all);
+
+            android.view.View content =
+                    getLayoutInflater().inflate(R.layout.dialog_whitelist, null);
+            final android.widget.EditText et = content.findViewById(R.id.et_search);
+            final android.widget.ListView lv = content.findViewById(R.id.lv_apps);
+
+            final AppCheckAdapter adapter = new AppCheckAdapter(pm, filtered, selected);
+            lv.setAdapter(adapter);
+
+            lv.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(android.widget.AdapterView<?> parent,
+                                        android.view.View view, int pos, long id) {
+                    String pkg = filtered.get(pos).packageName;
+                    if (selected.contains(pkg)) selected.remove(pkg);
+                    else selected.add(pkg);
+                    adapter.notifyDataSetChanged();
+                }
+            });
+
+            et.addTextChangedListener(new android.text.TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+                @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+                @Override public void afterTextChanged(android.text.Editable s) {
+                    String q = s.toString().trim().toLowerCase();
+                    filtered.clear();
+                    for (android.content.pm.ApplicationInfo ai : all) {
+                        String name = pm.getApplicationLabel(ai).toString().toLowerCase();
+                        String pkg = ai.packageName.toLowerCase();
+                        if (q.isEmpty() || name.contains(q) || pkg.contains(q)) filtered.add(ai);
+                    }
+                    adapter.notifyDataSetChanged();
+                }
+            });
 
             new android.app.AlertDialog.Builder(this)
-                    .setTitle("跳过校准的应用")
-                    .setMultiChoiceItems(names, checked,
-                            new android.content.DialogInterface.OnMultiChoiceClickListener() {
-                                @Override
-                                public void onClick(android.content.DialogInterface d,
-                                                    int which, boolean isChecked) {
-                                    checked[which] = isChecked;
-                                }
-                            })
+                    .setTitle("跳过校准的应用 · 共 " + all.size() + " 个")
+                    .setView(content)
                     .setPositiveButton("保存", new android.content.DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(android.content.DialogInterface d, int w) {
-                            java.util.Set<String> set = new java.util.HashSet<>();
-                            for (int i = 0; i < n; i++) {
-                                if (checked[i]) set.add(pkgs[i]);
-                            }
                             getSharedPreferences("rr", MODE_PRIVATE).edit()
-                                    .putStringSet("whitelist", set).apply();
+                                    .putStringSet("whitelist", selected).apply();
                             updateWhitelistUi();
-                            toast("已保存 " + set.size() + " 个应用");
+                            toast("已保存 " + selected.size() + " 个应用");
                         }
                     })
                     .setNegativeButton("取消", null)
@@ -700,13 +718,52 @@ public class MainActivity extends Activity {
         }
     }
 
+    /** 白名单列表适配器：应用名 + 包名，系统应用标注 */
+    private static class AppCheckAdapter extends android.widget.BaseAdapter {
+        private final android.content.pm.PackageManager pm;
+        private final java.util.List<android.content.pm.ApplicationInfo> data;
+        private final java.util.Set<String> selected;
+
+        AppCheckAdapter(android.content.pm.PackageManager pm,
+                        java.util.List<android.content.pm.ApplicationInfo> data,
+                        java.util.Set<String> selected) {
+            this.pm = pm;
+            this.data = data;
+            this.selected = selected;
+        }
+
+        @Override public int getCount() { return data.size(); }
+        @Override public Object getItem(int i) { return data.get(i); }
+        @Override public long getItemId(int i) { return i; }
+
+        @Override
+        public android.view.View getView(int pos, android.view.View convert,
+                                         android.view.ViewGroup parent) {
+            android.view.View v = convert;
+            if (v == null) {
+                v = android.view.LayoutInflater.from(parent.getContext())
+                        .inflate(R.layout.item_app_check, parent, false);
+            }
+            android.content.pm.ApplicationInfo ai = data.get(pos);
+            android.widget.TextView name = v.findViewById(R.id.tv_name);
+            android.widget.TextView pkg = v.findViewById(R.id.tv_pkg);
+            android.widget.CheckBox cb = v.findViewById(R.id.cb);
+
+            name.setText(pm.getApplicationLabel(ai));
+            boolean sys = (ai.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
+            pkg.setText(ai.packageName + (sys ? "  · 系统" : ""));
+            cb.setChecked(selected.contains(ai.packageName));
+            return v;
+        }
+    }
+
     private void updateWhitelistUi() {
         TextView btn = (TextView) findViewById(R.id.btn_whitelist);
         if (btn == null) return;
         int n = getSharedPreferences("rr", MODE_PRIVATE)
                 .getStringSet("whitelist", java.util.Collections.<String>emptySet()).size();
         btn.setText(n > 0 ? "跳过校准的应用：" + n + "（点此修改）" : "跳过校准的应用：0");
-        btn.setTextColor(n > 0 ? 0xFF4CD07D : 0xFFB0B0BA);
+        btn.setTextColor(n > 0 ? 0xFF4CD07D : 0xFFCAC4D0);
     }
 
     /** 跳转系统的"允许修改系统设置"开关页（AppOps 权限，adb 改不动，只能走 UI） */
@@ -765,7 +822,7 @@ public class MainActivity extends Activity {
             chip.setGravity(Gravity.CENTER);
             chip.setTextSize(16f);
             chip.setTypeface(Typeface.DEFAULT_BOLD);
-            chip.setTextColor(sel ? 0xFF0B0B0D : 0xFFB0B0BA);
+            chip.setTextColor(sel ? 0xFF381E72 : 0xFFCAC4D0);
             chip.setBackgroundResource(sel ? R.drawable.bg_chip_sel : R.drawable.bg_chip);
             chip.setPadding(0, dp(16), 0, dp(16));
 
