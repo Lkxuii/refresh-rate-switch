@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="acc_desc">用于在切换应用后立即校准刷新率设置。本服务不读取屏幕内容，只判断前台应用是否变化。</string>
+</resources>

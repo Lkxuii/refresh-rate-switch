@@ -507,6 +507,20 @@ public class MainActivity extends Activity {
         openWriteSettingsPage();
     }
 
+    /** 检查「使用情况访问权限」，用于应用切换时立即校准 */
+    private boolean hasUsageAccess() {
+        try {
+            android.app.AppOpsManager aom =
+                    (android.app.AppOpsManager) getSystemService(APP_OPS_SERVICE);
+            if (aom == null) return false;
+            int mode = aom.checkOpNoThrow(android.app.AppOpsManager.OPSTR_GET_USAGE_STATS,
+                    android.os.Process.myUid(), getPackageName());
+            return mode == android.app.AppOpsManager.MODE_ALLOWED;
+        } catch (Throwable t) {
+            return false;
+        }
+    }
+
     /** 开关锁定服务：定期重写 floor，让静止时稳定保持 60Hz，活动时仍走高刷。 */
     private void toggleLock() {
         if (lockRunning) {
@@ -525,7 +539,11 @@ public class MainActivity extends Activity {
             }
             startForegroundService(new android.content.Intent(this, LockService.class));
             lockRunning = true;
-            toast("已开启锁定：静止保持 60Hz，活动仍走高刷");
+            if (hasUsageAccess()) {
+                toast("已开启：静止保持 60Hz，切换应用即时校准");
+            } else {
+                toast("已开启：静止保持 60Hz\n如需切换应用即时生效，请开启「使用情况访问权限」");
+            }
         }
         updateLockUi();
     }

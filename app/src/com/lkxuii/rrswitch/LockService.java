@@ -32,10 +32,13 @@ public class LockService extends Service {
 
     private static final String CHANNEL = "rrlock";
     private static final long INTERVAL_MS = 10000L;
+    private static final long FOREGROUND_POLL_MS = 1000L;
 
     private Handler handler;
     private Runnable task;
+    private Runnable fgTask;
     private BroadcastReceiver screenReceiver;
+    private String lastPkg = "";
 
     @Override
     public void onCreate() {
@@ -106,31 +109,49 @@ public class LockService extends Service {
         handler.removeCallbacks(task);
         handler.post(task);
 
+        // 通道三：前台应用变化（需要「使用情况访问权限」，未授权时该检查会安全地无效）
+        if (fgTask == null) {
+            fgTask = new Runnable() {
+                @Override public void run() {
+                    checkForeground();
+                    if (handler != null) handler.postDelayed(this, FOREGROUND_POLL_MS);
+                }
+            };
+        }
+        handler.removeCallbacks(fgTask);
+        handler.post(fgTask);
+
         return START_STICKY;
     }
 
-    private void reapply() {
-        new Thread(new Runnable() {
-            @Override public void run() {
-                try {
-                    if (!Shizuku.pingBinder()
-                            || Shizuku.checkSelfPermission() != PackageManager.PERMISSION_GRANTED) {
-                        return;
-                    }
-                    Method m = Shizuku.class.getDeclaredMethod("newProcess",
-                            String[].class, String[].class, String.class);
-                    m.setAccessible(true);
-                    Process p = (Process) m.invoke(null, new String[]{"/system/bin/sh", "-c",
-                            // rate_mode=4 保持智能模式（活动可高刷），
-                            // floor 用 0→60 强制制造变化
-                            "settings put secure oplus_customize_screen_refresh_rate 4; "
-                                    + "settings put global force_pad_floor_fps 0; sleep 0.2; "
-                                    + "settings put global force_pad_floor_fps 60"}, null, null);
-                    p.waitFor();
-                } catch (Throwable ignored) {
+    /** 检测前台应用是否变化，变化时立即校准。依赖 UsageStats，未授权时静默跳过。 */
+    private void checkForeground() {
+        try {
+            android.app.usage.UsageStatsManager usm =
+                    (android.app.usage.UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
+            if (usm == null) return;
+            long now = System.currentTimeMillis();
+            java.util.List<android.app.usage.UsageStats> list = usm.queryUsageStats(
+                    android.app.usage.UsageStatsManager.INTERVAL_BEST, now - 15000, now);
+            if (list == null || list.isEmpty()) return;
+            String top = null;
+            long latest = 0;
+            for (android.app.usage.UsageStats s : list) {
+                if (s.getLastTimeUsed() > latest) {
+                    latest = s.getLastTimeUsed();
+                    top = s.getPackageName();
                 }
             }
-        }, "rr-lock").start();
+            if (top != null && !top.equals(lastPkg)) {
+                lastPkg = top;
+                reapply();
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void reapply() {
+        RrApply.apply();
     }
 
     @Override
