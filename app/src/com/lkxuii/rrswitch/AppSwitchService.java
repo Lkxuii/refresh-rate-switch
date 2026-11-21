@@ -11,6 +11,9 @@ import android.view.accessibility.AccessibilityEvent;
  */
 public class AppSwitchService extends AccessibilityService {
 
+    /** 当前前台包名，供 LockService 判断是否游戏（无障碍事件最准确） */
+    static volatile String sCurrentPkg = "";
+
     private String lastPkg = "";
 
     @Override
@@ -22,6 +25,7 @@ public class AppSwitchService extends AccessibilityService {
         String pkg = seq.toString();
         if (pkg.equals(lastPkg)) return;
         lastPkg = pkg;
+        sCurrentPkg = pkg;
         // 应用切换是状态最易失效的时机，强制重写
         RrApply.apply(true);
     }

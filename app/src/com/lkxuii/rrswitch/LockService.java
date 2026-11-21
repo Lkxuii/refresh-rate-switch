@@ -97,11 +97,13 @@ public class LockService extends Service {
             }
         }
 
-        // 通道二：定时兜底
+        // 通道二：定时兜底（游戏在前台时跳过，避免中途扰动 SurfaceFlinger）
         if (task == null) {
             task = new Runnable() {
                 @Override public void run() {
-                    reapply(false);
+                    if (!isGameForeground()) {
+                        reapply(false);
+                    }
                     if (handler != null) handler.postDelayed(this, INTERVAL_MS);
                 }
             };
@@ -109,46 +111,47 @@ public class LockService extends Service {
         handler.removeCallbacks(task);
         handler.post(task);
 
-        // 通道三：前台应用变化（需要「使用情况访问权限」，未授权时该检查会安全地无效）
-        if (fgTask == null) {
-            fgTask = new Runnable() {
-                @Override public void run() {
-                    checkForeground();
-                    if (handler != null) handler.postDelayed(this, FOREGROUND_POLL_MS);
-                }
-            };
-        }
-        handler.removeCallbacks(fgTask);
-        handler.post(fgTask);
-
         return START_STICKY;
     }
 
-    /** 检测前台应用是否变化，变化时立即校准。依赖 UsageStats，未授权时静默跳过。 */
-    private void checkForeground() {
-        // 无障碍已开启时由 AppSwitchService 实时接管，这里跳过，避免重复写入
-        if (accessibilityActive()) return;
+    /** 判定前台是否为游戏。游戏期间 SF 负载高，此时不做定时校准以免加剧风险。 */
+    private boolean isGameForeground() {
+        String pkg = currentPkg();
+        if (pkg == null || pkg.isEmpty()) return false;
         try {
-            android.app.usage.UsageStatsManager usm =
-                    (android.app.usage.UsageStatsManager) getSystemService(USAGE_STATS_SERVICE);
-            if (usm == null) return;
-            long now = System.currentTimeMillis();
-            java.util.List<android.app.usage.UsageStats> list = usm.queryUsageStats(
-                    android.app.usage.UsageStatsManager.INTERVAL_BEST, now - 15000, now);
-            if (list == null || list.isEmpty()) return;
-            String top = null;
-            long latest = 0;
-            for (android.app.usage.UsageStats s : list) {
-                if (s.getLastTimeUsed() > latest) {
-                    latest = s.getLastTimeUsed();
-                    top = s.getPackageName();
-                }
-            }
-            if (top != null && !top.equals(lastPkg)) {
-                lastPkg = top;
-                reapply(true);
-            }
+            android.content.pm.ApplicationInfo ai =
+                    getPackageManager().getApplicationInfo(pkg, 0);
+            if (ai.category == android.content.pm.ApplicationInfo.CATEGORY_GAME) return true;
         } catch (Throwable ignored) {
+        }
+        String l = pkg.toLowerCase();
+        return l.contains(".tmgp") || l.contains(".game") || l.contains("gamecenter")
+                || l.startsWith("com.mihoyo") || l.startsWith("com.netease")
+                || l.startsWith("com.hypergryph") || l.startsWith("com.riotgames")
+                || l.startsWith("com.supercell") || l.startsWith("com.mojang")
+                || l.startsWith("com.epicgames") || l.startsWith("com.garena");
+    }
+
+    /**
+     * 取当前前台包名。
+     * UsageStats 的两条路在 ColorOS 上都不靠谱：
+     * - getLastTimeUsed() 恒为 1970（字段没写）
+     * - queryEvents 的 MOVE_TO_FOREGROUND 也不总是及时
+     * 所以直接读系统焦点，通过 Shizuku 执行 dumpsys。
+     */
+    private String currentPkg() {
+        try {
+            String out = RrApply.exec("dumpsys window | grep -m1 mCurrentFocus");
+            int i = out.indexOf(" u0 ");
+            if (i < 0) return null;
+            String rest = out.substring(i + 4).trim();
+            int sp = rest.indexOf(' ');
+            if (sp > 0) rest = rest.substring(0, sp);
+            int slash = rest.indexOf('/');
+            if (slash > 0) rest = rest.substring(0, slash);
+            return rest.isEmpty() ? null : rest;
+        } catch (Throwable ignored) {
+            return null;
         }
     }
 

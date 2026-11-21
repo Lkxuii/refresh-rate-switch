@@ -100,7 +100,7 @@ final class RrApply {
         return false;
     }
 
-    private static String exec(String cmd) throws Exception {
+    static String exec(String cmd) throws Exception {
         Process p = (Process) sNewProcess.invoke(null,
                 new String[]{"/system/bin/sh", "-c", cmd}, null, null);
         StringBuilder sb = new StringBuilder();
