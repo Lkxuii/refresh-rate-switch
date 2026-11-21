@@ -159,6 +159,14 @@ public class MainActivity extends Activity {
         });
 
         lockRunning = isLockServiceRunning();
+        // 若用户上次开着锁定但服务被系统清理了，重开 App 时自动拉起
+        if (!lockRunning && getSharedPreferences("rr", MODE_PRIVATE).getBoolean("lock", false)) {
+            try {
+                startForegroundService(new android.content.Intent(this, LockService.class));
+                lockRunning = true;
+            } catch (Throwable ignored) {
+            }
+        }
         ensureShizukuBinder();
         rebuildChips();
         updateSummary();
@@ -529,6 +537,7 @@ public class MainActivity extends Activity {
         if (lockRunning) {
             stopService(new android.content.Intent(this, LockService.class));
             lockRunning = false;
+            getSharedPreferences("rr", MODE_PRIVATE).edit().putBoolean("lock", false).apply();
             toast("已停止锁定，静止时可能回到 50Hz");
         } else {
             if (idleRate <= 50) {
@@ -542,6 +551,7 @@ public class MainActivity extends Activity {
             }
             startForegroundService(new android.content.Intent(this, LockService.class));
             lockRunning = true;
+            getSharedPreferences("rr", MODE_PRIVATE).edit().putBoolean("lock", true).apply();
             if (hasUsageAccess()) {
                 toast("已开启：静止保持 60Hz，切换应用即时校准");
             } else {
