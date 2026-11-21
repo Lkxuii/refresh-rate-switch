@@ -684,20 +684,41 @@ public class MainActivity extends Activity {
                 }
             });
 
-            et.addTextChangedListener(new android.text.TextWatcher() {
-                @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
-                @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
-                @Override public void afterTextChanged(android.text.Editable s) {
-                    String q = s.toString().trim().toLowerCase();
+            final android.widget.CheckBox cbSystem = content.findViewById(R.id.cb_system);
+            final boolean[] showSystem = {false};
+
+            final Runnable refresh = new Runnable() {
+                @Override public void run() {
+                    String q = et.getText().toString().trim().toLowerCase();
                     filtered.clear();
                     for (android.content.pm.ApplicationInfo ai : all) {
+                        boolean sys = (ai.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
+                        if (sys && !showSystem[0]) continue;
                         String name = pm.getApplicationLabel(ai).toString().toLowerCase();
                         String pkg = ai.packageName.toLowerCase();
                         if (q.isEmpty() || name.contains(q) || pkg.contains(q)) filtered.add(ai);
                     }
                     adapter.notifyDataSetChanged();
                 }
+            };
+            refresh.run();
+
+            et.addTextChangedListener(new android.text.TextWatcher() {
+                @Override public void beforeTextChanged(CharSequence s, int a, int b, int c) { }
+                @Override public void onTextChanged(CharSequence s, int a, int b, int c) { }
+                @Override public void afterTextChanged(android.text.Editable s) {
+                    refresh.run();
+                }
             });
+
+            cbSystem.setOnCheckedChangeListener(
+                    new android.widget.CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
+                            showSystem[0] = checked;
+                            refresh.run();
+                        }
+                    });
 
             new android.app.AlertDialog.Builder(this)
                     .setTitle("跳过校准的应用 · 共 " + all.size() + " 个")
