@@ -29,12 +29,18 @@ assert_eq() {
 }
 
 tap_rate() {
-  local text="$1" row="$2" line b1 b2 b3 b4
+  local text="$1" row="$2" line act_y idle_y
+  # 用两个分区标题的 y 坐标动态划分行，避免硬编码阈值（授权按钮显隐会改变布局高度）
+  act_y=$(ui_bounds "活动刷新率" | head -1 | awk '{print $2}')
+  idle_y=$(ui_bounds "闲时刷新率" | head -1 | awk '{print $2}')
+  if [ -z "$act_y" ] || [ -z "$idle_y" ]; then
+    echo "    !! 未能定位分区标题"
+    return 1
+  fi
   if [ "$row" = "idle" ]; then
-    line=$(ui_bounds "$text" | awk '$2 > 1600' | head -1)
+    line=$(ui_bounds "$text" | awk -v b="$idle_y" '$2 >= b' | head -1)
   else
-    # 排除顶部大数字区（y<1000），它和档位文字可能相同
-    line=$(ui_bounds "$text" | awk '$2 > 1000 && $2 < 1600' | head -1)
+    line=$(ui_bounds "$text" | awk -v a="$act_y" -v b="$idle_y" '$2 >= a && $2 < b' | head -1)
   fi
   if [ -z "$line" ]; then
     echo "    !! 未找到档位 [$text] ($row)"

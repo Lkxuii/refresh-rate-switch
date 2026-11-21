@@ -363,7 +363,7 @@ public class MainActivity extends Activity {
             idleRate = si <= 50 ? 50f : 60f;
             rebuildChips();
             updateSummary();
-            pollAsync();
+            checkAndReapply();
             return;
         }
 
@@ -383,6 +383,33 @@ public class MainActivity extends Activity {
                 });
             }
         }, "rr-load").start();
+    }
+
+    /**
+     * 启动时比对系统实际值与用户设定，不一致就自动重新应用。
+     * 典型场景：设备重启后 ColorOS 会把 peak/floor 重置，但 App 的偏好还在。
+     */
+    private void checkAndReapply() {
+        if (!hasAnyChannel()) {
+            pollAsync();
+            return;
+        }
+        new Thread(new Runnable() {
+            @Override public void run() {
+                float peak = readPeak();
+                int floor = readFloor();
+                int wantFloor = idleRate <= 50 ? 0 : 60;
+                boolean mismatch = Math.abs(peak - activeRate) > 1 || floor != wantFloor;
+                boolean fixed = mismatch && writeAll(activeRate, idleRate);
+                final boolean notify = fixed;
+                ui.post(new Runnable() {
+                    @Override public void run() {
+                        if (notify) toast("检测到系统设置被重置，已自动恢复");
+                        pollAsync();
+                    }
+                });
+            }
+        }, "rr-reapply").start();
     }
 
     // ---------------- 操作 ----------------
