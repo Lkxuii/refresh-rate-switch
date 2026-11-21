@@ -131,6 +131,9 @@ public class MainActivity extends Activity {
         findViewById(R.id.btn_acc).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { openAccessibilitySettings(); }
         });
+        findViewById(R.id.btn_whitelist).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { showWhitelistDialog(); }
+        });
         findViewById(R.id.btn_perm).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { onPermClick(); }
         });
@@ -171,6 +174,7 @@ public class MainActivity extends Activity {
         rebuildChips();
         updateSummary();
         updateLockUi();
+        updateWhitelistUi();
         updatePermUi();
     }
 
@@ -632,6 +636,77 @@ public class MainActivity extends Activity {
             btn.setText("无障碍监听：未开启（点此开启）");
             btn.setTextColor(0xFFB0B0BA);
         }
+    }
+
+    /** 多选对话框：选中的应用在前台时跳过校准（游戏是自动识别的，这里补充手动指定） */
+    private void showWhitelistDialog() {
+        try {
+            final android.content.pm.PackageManager pm = getPackageManager();
+            java.util.List<android.content.pm.ApplicationInfo> all = pm.getInstalledApplications(0);
+            java.util.List<android.content.pm.ApplicationInfo> list = new java.util.ArrayList<>();
+            for (android.content.pm.ApplicationInfo ai : all) {
+                if (pm.getLaunchIntentForPackage(ai.packageName) != null) list.add(ai);
+            }
+            java.util.Collections.sort(list,
+                    new java.util.Comparator<android.content.pm.ApplicationInfo>() {
+                        @Override
+                        public int compare(android.content.pm.ApplicationInfo a,
+                                           android.content.pm.ApplicationInfo b) {
+                            return pm.getApplicationLabel(a).toString()
+                                    .compareTo(pm.getApplicationLabel(b).toString());
+                        }
+                    });
+
+            final int n = list.size();
+            final String[] names = new String[n];
+            final String[] pkgs = new String[n];
+            final boolean[] checked = new boolean[n];
+            java.util.Set<String> wl = getSharedPreferences("rr", MODE_PRIVATE)
+                    .getStringSet("whitelist", java.util.Collections.<String>emptySet());
+            for (int i = 0; i < n; i++) {
+                android.content.pm.ApplicationInfo ai = list.get(i);
+                names[i] = pm.getApplicationLabel(ai).toString();
+                pkgs[i] = ai.packageName;
+                checked[i] = wl.contains(ai.packageName);
+            }
+
+            new android.app.AlertDialog.Builder(this)
+                    .setTitle("跳过校准的应用")
+                    .setMultiChoiceItems(names, checked,
+                            new android.content.DialogInterface.OnMultiChoiceClickListener() {
+                                @Override
+                                public void onClick(android.content.DialogInterface d,
+                                                    int which, boolean isChecked) {
+                                    checked[which] = isChecked;
+                                }
+                            })
+                    .setPositiveButton("保存", new android.content.DialogInterface.OnClickListener() {
+                        @Override
+                        public void onClick(android.content.DialogInterface d, int w) {
+                            java.util.Set<String> set = new java.util.HashSet<>();
+                            for (int i = 0; i < n; i++) {
+                                if (checked[i]) set.add(pkgs[i]);
+                            }
+                            getSharedPreferences("rr", MODE_PRIVATE).edit()
+                                    .putStringSet("whitelist", set).apply();
+                            updateWhitelistUi();
+                            toast("已保存 " + set.size() + " 个应用");
+                        }
+                    })
+                    .setNegativeButton("取消", null)
+                    .show();
+        } catch (Throwable t) {
+            toast("打开列表失败");
+        }
+    }
+
+    private void updateWhitelistUi() {
+        TextView btn = (TextView) findViewById(R.id.btn_whitelist);
+        if (btn == null) return;
+        int n = getSharedPreferences("rr", MODE_PRIVATE)
+                .getStringSet("whitelist", java.util.Collections.<String>emptySet()).size();
+        btn.setText(n > 0 ? "跳过校准的应用：" + n + "（点此修改）" : "跳过校准的应用：0");
+        btn.setTextColor(n > 0 ? 0xFF4CD07D : 0xFFB0B0BA);
     }
 
     /** 跳转系统的"允许修改系统设置"开关页（AppOps 权限，adb 改不动，只能走 UI） */

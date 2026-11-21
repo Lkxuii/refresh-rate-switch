@@ -97,11 +97,11 @@ public class LockService extends Service {
             }
         }
 
-        // 通道二：定时兜底（游戏在前台时跳过，避免中途扰动 SurfaceFlinger）
+        // 通道二：定时兜底（游戏或白名单应用在前台时跳过，避免中途扰动 SurfaceFlinger）
         if (task == null) {
             task = new Runnable() {
                 @Override public void run() {
-                    if (!isGameForeground()) {
+                    if (!shouldSkipTuning()) {
                         reapply(false);
                     }
                     if (handler != null) handler.postDelayed(this, INTERVAL_MS);
@@ -114,10 +114,21 @@ public class LockService extends Service {
         return START_STICKY;
     }
 
-    /** 判定前台是否为游戏。游戏期间 SF 负载高，此时不做定时校准以免加剧风险。 */
-    private boolean isGameForeground() {
+    /** 当前应用是否应跳过校准：白名单命中，或识别为游戏。 */
+    private boolean shouldSkipTuning() {
         String pkg = currentPkg();
         if (pkg == null || pkg.isEmpty()) return false;
+        try {
+            java.util.Set<String> wl = getSharedPreferences("rr", MODE_PRIVATE)
+                    .getStringSet("whitelist", java.util.Collections.<String>emptySet());
+            if (wl.contains(pkg)) return true;
+        } catch (Throwable ignored) {
+        }
+        return isGame(pkg);
+    }
+
+    /** 判定是否为游戏。游戏期间 SF 负载高，不做定时校准以免加剧风险。 */
+    private boolean isGame(String pkg) {
         try {
             android.content.pm.ApplicationInfo ai =
                     getPackageManager().getApplicationInfo(pkg, 0);
