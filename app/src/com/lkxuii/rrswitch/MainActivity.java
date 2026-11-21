@@ -128,6 +128,9 @@ public class MainActivity extends Activity {
         findViewById(R.id.btn_lock).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { toggleLock(); }
         });
+        findViewById(R.id.btn_acc).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { openAccessibilitySettings(); }
+        });
         findViewById(R.id.btn_perm).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { onPermClick(); }
         });
@@ -568,6 +571,57 @@ public class MainActivity extends Activity {
         if (btn == null) return;
         btn.setText(lockRunning ? "保持静止 60Hz：开（点此关闭）" : "保持静止 60Hz：关");
         btn.setTextColor(lockRunning ? 0xFF4CD07D : 0xFFB0B0BA);
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+        updateAccUi();
+    }
+
+    private void openAccessibilitySettings() {
+        try {
+            startActivity(new android.content.Intent(
+                    android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS));
+            toast("在列表里找到「刷新率切换」并开启");
+        } catch (Throwable t) {
+            toast("无法打开无障碍设置页");
+        }
+    }
+
+    /**
+     * 查询无障碍服务是否真的在运行。
+     * 不能用 enabled_accessibility_services 判断——ColorOS 会写入成功但不绑定。
+     */
+    private boolean isAccessibilityEnabled() {
+        try {
+            android.view.accessibility.AccessibilityManager am =
+                    (android.view.accessibility.AccessibilityManager)
+                            getSystemService(ACCESSIBILITY_SERVICE);
+            if (am == null) return false;
+            java.util.List<android.accessibilityservice.AccessibilityServiceInfo> list =
+                    am.getEnabledAccessibilityServiceList(
+                            android.accessibilityservice.AccessibilityServiceInfo.FEEDBACK_ALL_MASK);
+            if (list == null) return false;
+            for (android.accessibilityservice.AccessibilityServiceInfo info : list) {
+                String id = info.getId();
+                if (id != null && id.startsWith(getPackageName())) return true;
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
+    }
+
+    private void updateAccUi() {
+        TextView btn = (TextView) findViewById(R.id.btn_acc);
+        if (btn == null) return;
+        if (isAccessibilityEnabled()) {
+            btn.setText("无障碍监听：已开启（切换应用实时校准）");
+            btn.setTextColor(0xFF4CD07D);
+        } else {
+            btn.setText("无障碍监听：未开启（点此开启）");
+            btn.setTextColor(0xFFB0B0BA);
+        }
     }
 
     /** 跳转系统的"允许修改系统设置"开关页（AppOps 权限，adb 改不动，只能走 UI） */
