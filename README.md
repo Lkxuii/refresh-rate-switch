@@ -1,5 +1,8 @@
 # Refresh Rate Switch
 
+[![release](https://img.shields.io/github/v/release/Lkxuii/refresh-rate-switch)](https://github.com/Lkxuii/refresh-rate-switch/releases)
+[![license](https://img.shields.io/github/license/Lkxuii/refresh-rate-switch)](https://github.com/Lkxuii/refresh-rate-switch/blob/main/LICENSE)
+
 Android 平板刷新率手动切换工具，无需 root。通过 [Shizuku](https://shizuku.rikka.app/) 获取 shell 权限修改系统设置，把「活动刷新率」和「闲时刷新率」拆开独立控制。
 
 在 **一加平板 2 Pro（OPD2413 / ColorOS 15 / Android 15）** 上开发并验证，其他 ColorOS / OxygenOS 机型可参考。
