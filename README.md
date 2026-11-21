@@ -13,8 +13,12 @@ Android 平板刷新率手动切换工具，无需 root。通过 [Shizuku](https
 |---|---|---|
 | 活动刷新率 | 30 / 48 / 50 / 60 / 90 / 120 / 144 | 滑动、动画、视频播放时的上限 |
 | 闲时刷新率 | 50 / 60 | 静止无操作时的下限 |
+| 保持静止 60Hz | 开 / 关 | 前台服务持续维持闲时 60Hz，防止被系统改写 |
+| 需要校准的应用 | 空 / 指定应用 | 留空＝对所有应用校准；非空＝只校准选中的应用（游戏始终跳过） |
 
-另外提供「强制重算」（熄屏再亮屏，让 SurfaceFlinger 重新选模式）和「恢复默认」。
+另外提供「强制重算」（熄屏再亮屏，让 SurfaceFlinger 重新选模式）、「无障碍监听」（应用切换时实时校准，需手动开启无障碍服务）和「恢复默认」。
+
+「需要校准的应用」对话框支持搜索、全选 / 反选 / 清空、只看已选、显示系统应用；快捷操作只作用于当前筛选结果。若选了应用但无障碍未开，切应用时不会即时校准，界面会给出提示。
 
 ## 它解决什么问题
 
@@ -153,7 +157,7 @@ ADB=/path/to/adb bash test.sh
 
 1. `Shizuku.newProcess()` 在 API 13.x 被降级为 `private`，需反射调用
 2. 必须合并 `dev.rikka.shizuku:aidl` 与 `:shared` 的 `classes.jar`，否则运行时 `NoClassDefFoundError: moe/shizuku/server/IShizukuApplication$Stub`
-3. 需要 `<queries><package android:name="moe.shizuku.privileged.api" /></queries>`（Android 11+ 包可见性）
+3. 需要 `<queries><package android:name="moe.shizuku.privileged.api" /></queries>` 才能访问 Shizuku 的 provider；而「需要校准的应用」要扫描全机应用，必须另外声明 `QUERY_ALL_PACKAGES`（Android 11+ 包可见性），否则 `getInstalledApplications()` 只能返回自己和 queries 里声明的包，列表会只剩两个
 4. `moe.shizuku.manager.permission.API_V23` 必须实际授予，仅声明无效
 5. provider 不能声明 `android:permission="android.permission.INTERACT_ACROSS_USERS_FULL"`，否则 App 内调用自己的 provider 会被拦截
 

@@ -35,6 +35,20 @@ public class MainActivity extends Activity {
     private float activeRate = 144f;
     private float idleRate = 60f;
 
+    /** 应用列表缓存：label 一次性预取 + 排序结果，避免反复跨进程取应用名 */
+    private static java.util.Map<String, String> sAppLabels = null;
+    private static java.util.List<android.content.pm.ApplicationInfo> sAllApps = null;
+
+    /** 安装/卸载应用时让列表缓存失效 */
+    private final android.content.BroadcastReceiver mPkgReceiver =
+            new android.content.BroadcastReceiver() {
+                @Override
+                public void onReceive(android.content.Context c, android.content.Intent i) {
+                    sAllApps = null;
+                    sAppLabels = null;
+                }
+            };
+
     private TextView tvLive, tvSummary, tvPerm;
     private LinearLayout groupActive, groupIdle;
 
@@ -110,6 +124,17 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // 监听应用安装/卸载，让扫描缓存失效
+        try {
+            android.content.IntentFilter pkgFilter = new android.content.IntentFilter();
+            pkgFilter.addAction(android.content.Intent.ACTION_PACKAGE_ADDED);
+            pkgFilter.addAction(android.content.Intent.ACTION_PACKAGE_REMOVED);
+            pkgFilter.addAction(android.content.Intent.ACTION_PACKAGE_CHANGED);
+            pkgFilter.addDataScheme("package");
+            registerReceiver(mPkgReceiver, pkgFilter);
+        } catch (Throwable ignored) {
+        }
+
         tvLive = (TextView) findViewById(R.id.tv_live);
         tvSummary = (TextView) findViewById(R.id.tv_summary);
         tvPerm = (TextView) findViewById(R.id.tv_perm);
@@ -182,6 +207,7 @@ public class MainActivity extends Activity {
     protected void onDestroy() {
         polling = false;
         ui.removeCallbacks(pollTask);
+        try { unregisterReceiver(mPkgReceiver); } catch (Throwable ignored) {}
         super.onDestroy();
     }
 
@@ -597,7 +623,7 @@ public class MainActivity extends Activity {
         try {
             startActivity(new android.content.Intent(
                     android.provider.Settings.ACTION_ACCESSIBILITY_SETTINGS));
-            toast("在列表里找到「刷新率切换」并开启");
+            toast("在列表里找到「刷新率切换」并打开开关，\n返回后切应用即可即时校准");
         } catch (Throwable t) {
             toast("无法打开无障碍设置页");
         }
@@ -633,34 +659,72 @@ public class MainActivity extends Activity {
             btn.setText("无障碍监听：已开启（切换应用实时校准）");
             btn.setTextColor(0xFF4CD07D);
         } else {
-            btn.setText("无障碍监听：未开启（点此开启）");
-            btn.setTextColor(0xFFCAC4D0);
+            // 未开启时用强调色，让"切应用校准不生效"这件事一眼可见
+            btn.setText("无障碍监听未开 · 点此开启（切应用即时校准）");
+            btn.setTextColor(0xFFFFB020);
         }
     }
 
-    /** 多选对话框：选中的应用在前台时跳过校准（游戏是自动识别的，这里补充手动指定） */
+    /**
+     * 取应用名：优先读缓存，避免排序/渲染时反复跨进程调用 getApplicationLabel。
+     */
+    private static String labelOf(android.content.pm.PackageManager pm,
+                                  android.content.pm.ApplicationInfo ai) {
+        String label = sAppLabels == null ? null : sAppLabels.get(ai.packageName);
+        if (label == null) {
+            try { label = pm.getApplicationLabel(ai).toString(); }
+            catch (Throwable t) { label = ai.packageName; }
+            if (sAppLabels != null) sAppLabels.put(ai.packageName, label);
+        }
+        return label;
+    }
+
+    /**
+     * 扫描全机应用并排序（用户应用在前 + 应用名序），结果缓存。
+     * 关键提速：先把所有 label 一次性预取到 Map，排序比较器只读 Map，
+     * 把原来约 3500 次跨进程 getApplicationLabel 降到 227 次。
+     */
+    private java.util.List<android.content.pm.ApplicationInfo> getAllAppsSorted(
+            android.content.pm.PackageManager pm) {
+        if (sAllApps != null && sAppLabels != null) return sAllApps;
+        java.util.List<android.content.pm.ApplicationInfo> all =
+                new java.util.ArrayList<>(pm.getInstalledApplications(0));
+        final java.util.Map<String, String> labels = new java.util.HashMap<>();
+        for (android.content.pm.ApplicationInfo ai : all) {
+            String label;
+            try { label = pm.getApplicationLabel(ai).toString(); }
+            catch (Throwable t) { label = ai.packageName; }
+            labels.put(ai.packageName, label);
+        }
+        sAppLabels = labels;
+        java.util.Collections.sort(all,
+                new java.util.Comparator<android.content.pm.ApplicationInfo>() {
+                    @Override
+                    public int compare(android.content.pm.ApplicationInfo a,
+                                       android.content.pm.ApplicationInfo b) {
+                        boolean sa = (a.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
+                        boolean sb = (b.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
+                        if (sa != sb) return sa ? 1 : -1;
+                        String la = labels.get(a.packageName);
+                        String lb = labels.get(b.packageName);
+                        return (la == null ? a.packageName : la)
+                                .compareToIgnoreCase(lb == null ? b.packageName : lb);
+                    }
+                });
+        sAllApps = all;
+        return all;
+    }
+
+    /** 多选对话框：只有选中的应用才会被校准；留空表示对所有应用校准（游戏始终跳过定时校准） */
     private void showWhitelistDialog() {
         try {
             final android.content.pm.PackageManager pm = getPackageManager();
-            // 扫描全部应用（不再只保留有启动图标的），排序时用户应用在前
-            final java.util.List<android.content.pm.ApplicationInfo> all =
-                    new java.util.ArrayList<>(pm.getInstalledApplications(0));
-            java.util.Collections.sort(all,
-                    new java.util.Comparator<android.content.pm.ApplicationInfo>() {
-                        @Override
-                        public int compare(android.content.pm.ApplicationInfo a,
-                                           android.content.pm.ApplicationInfo b) {
-                            boolean sa = (a.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
-                            boolean sb = (b.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
-                            if (sa != sb) return sa ? 1 : -1;
-                            return pm.getApplicationLabel(a).toString()
-                                    .compareToIgnoreCase(pm.getApplicationLabel(b).toString());
-                        }
-                    });
+            // 扫描全部应用（缓存结果），用户应用在前
+            final java.util.List<android.content.pm.ApplicationInfo> all = getAllAppsSorted(pm);
 
             final java.util.Set<String> selected = new java.util.HashSet<>(
                     getSharedPreferences("rr", MODE_PRIVATE)
-                            .getStringSet("whitelist", java.util.Collections.<String>emptySet()));
+                            .getStringSet("needlist", java.util.Collections.<String>emptySet()));
 
             final java.util.List<android.content.pm.ApplicationInfo> filtered =
                     new java.util.ArrayList<>(all);
@@ -673,6 +737,18 @@ public class MainActivity extends Activity {
             final AppCheckAdapter adapter = new AppCheckAdapter(pm, filtered, selected);
             lv.setAdapter(adapter);
 
+            final android.widget.CheckBox cbSystem = content.findViewById(R.id.cb_system);
+            final android.widget.CheckBox cbSelectedOnly = content.findViewById(R.id.cb_selected_only);
+            final android.widget.TextView tvCount = content.findViewById(R.id.tv_sel_count);
+            final boolean[] showSystem = {false};
+            final boolean[] selectedOnly = {false};
+
+            final Runnable updateCount = new Runnable() {
+                @Override public void run() {
+                    tvCount.setText("已选 " + selected.size());
+                }
+            };
+
             lv.setOnItemClickListener(new android.widget.AdapterView.OnItemClickListener() {
                 @Override
                 public void onItemClick(android.widget.AdapterView<?> parent,
@@ -681,11 +757,10 @@ public class MainActivity extends Activity {
                     if (selected.contains(pkg)) selected.remove(pkg);
                     else selected.add(pkg);
                     adapter.notifyDataSetChanged();
+                    updateCount.run();
+                    // 「只看已选」下取消勾选会让该项立刻从列表消失，符合预期
                 }
             });
-
-            final android.widget.CheckBox cbSystem = content.findViewById(R.id.cb_system);
-            final boolean[] showSystem = {false};
 
             final Runnable refresh = new Runnable() {
                 @Override public void run() {
@@ -694,11 +769,13 @@ public class MainActivity extends Activity {
                     for (android.content.pm.ApplicationInfo ai : all) {
                         boolean sys = (ai.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
                         if (sys && !showSystem[0]) continue;
-                        String name = pm.getApplicationLabel(ai).toString().toLowerCase();
+                        if (selectedOnly[0] && !selected.contains(ai.packageName)) continue;
+                        String name = labelOf(pm, ai).toLowerCase();
                         String pkg = ai.packageName.toLowerCase();
                         if (q.isEmpty() || name.contains(q) || pkg.contains(q)) filtered.add(ai);
                     }
                     adapter.notifyDataSetChanged();
+                    updateCount.run();
                 }
             };
             refresh.run();
@@ -720,20 +797,75 @@ public class MainActivity extends Activity {
                         }
                     });
 
-            new android.app.AlertDialog.Builder(this)
-                    .setTitle("跳过校准的应用 · 共 " + all.size() + " 个")
+            cbSelectedOnly.setOnCheckedChangeListener(
+                    new android.widget.CompoundButton.OnCheckedChangeListener() {
+                        @Override
+                        public void onCheckedChanged(android.widget.CompoundButton b, boolean checked) {
+                            selectedOnly[0] = checked;
+                            refresh.run();
+                        }
+                    });
+
+            // 全选 / 反选 / 清空：只作用于当前可见的筛选结果，符合直觉
+            final android.view.View.OnClickListener bulk = new android.view.View.OnClickListener() {
+                @Override public void onClick(android.view.View v) {
+                    int id = v.getId();
+                    if (id == R.id.btn_select_all) {
+                        for (android.content.pm.ApplicationInfo ai : filtered) selected.add(ai.packageName);
+                    } else if (id == R.id.btn_invert) {
+                        for (android.content.pm.ApplicationInfo ai : filtered) {
+                            String pkg = ai.packageName;
+                            if (selected.contains(pkg)) selected.remove(pkg);
+                            else selected.add(pkg);
+                        }
+                    } else if (id == R.id.btn_clear_sel) {
+                        selected.clear();
+                    }
+                    adapter.notifyDataSetChanged();
+                    updateCount.run();
+                }
+            };
+            content.findViewById(R.id.btn_select_all).setOnClickListener(bulk);
+            content.findViewById(R.id.btn_invert).setOnClickListener(bulk);
+            content.findViewById(R.id.btn_clear_sel).setOnClickListener(bulk);
+
+            final android.app.AlertDialog dialog = new android.app.AlertDialog.Builder(this)
+                    .setTitle("需要校准的应用 · 共 " + all.size() + " 个")
                     .setView(content)
                     .setPositiveButton("保存", new android.content.DialogInterface.OnClickListener() {
                         @Override
                         public void onClick(android.content.DialogInterface d, int w) {
                             getSharedPreferences("rr", MODE_PRIVATE).edit()
-                                    .putStringSet("whitelist", selected).apply();
+                                    .putStringSet("needlist", selected).apply();
                             updateWhitelistUi();
-                            toast("已保存 " + selected.size() + " 个应用");
+                            if (selected.isEmpty()) {
+                                toast("已清空，将对所有应用校准");
+                            } else if (!isAccessibilityEnabled()) {
+                                // 精确控制已生效于定时校准，但切应用那条路依赖无障碍，必须点明
+                                toast("已保存 " + selected.size() + " 个应用\n"
+                                        + "注意：需开启「无障碍监听」，切换应用时才生效");
+                            } else {
+                                toast("已保存 " + selected.size() + " 个应用");
+                            }
                         }
                     })
                     .setNegativeButton("取消", null)
-                    .show();
+                    .create();
+            dialog.show();
+            // AlertDialog 默认按内容 wrap_content 测量，ListView 会被压到只剩一两行。
+            // 强制给窗口一个较大的高度（屏幕 82%），让应用列表完整展开可滚动。
+            try {
+                android.view.Window w = dialog.getWindow();
+                if (w != null) {
+                    android.util.DisplayMetrics dm = new android.util.DisplayMetrics();
+                    getWindowManager().getDefaultDisplay().getMetrics(dm);
+                    android.view.WindowManager.LayoutParams lp = w.getAttributes();
+                    lp.width = (int) (dm.widthPixels * 0.92f);
+                    lp.height = (int) (dm.heightPixels * 0.82f);
+                    w.setAttributes(lp);
+                }
+            } catch (Throwable ignored) {
+            }
         } catch (Throwable t) {
             toast("打开列表失败");
         }
@@ -770,7 +902,7 @@ public class MainActivity extends Activity {
             android.widget.TextView pkg = v.findViewById(R.id.tv_pkg);
             android.widget.CheckBox cb = v.findViewById(R.id.cb);
 
-            name.setText(pm.getApplicationLabel(ai));
+            name.setText(labelOf(pm, ai));
             boolean sys = (ai.flags & android.content.pm.ApplicationInfo.FLAG_SYSTEM) != 0;
             pkg.setText(ai.packageName + (sys ? "  · 系统" : ""));
             cb.setChecked(selected.contains(ai.packageName));
@@ -782,9 +914,9 @@ public class MainActivity extends Activity {
         TextView btn = (TextView) findViewById(R.id.btn_whitelist);
         if (btn == null) return;
         int n = getSharedPreferences("rr", MODE_PRIVATE)
-                .getStringSet("whitelist", java.util.Collections.<String>emptySet()).size();
-        btn.setText(n > 0 ? "跳过校准的应用：" + n + "（点此修改）" : "跳过校准的应用：0");
-        btn.setTextColor(n > 0 ? 0xFF4CD07D : 0xFFCAC4D0);
+                .getStringSet("needlist", java.util.Collections.<String>emptySet()).size();
+        btn.setText(n > 0 ? "需要校准的应用：" + n + "（点此修改）" : "需要校准的应用：全部");
+        btn.setTextColor(n > 0 ? 0xFFD0BCFF : 0xFFCAC4D0);
     }
 
     /** 跳转系统的"允许修改系统设置"开关页（AppOps 权限，adb 改不动，只能走 UI） */

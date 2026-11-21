@@ -2,7 +2,7 @@
 <ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="#381E72"
+    android:background="#141218"
     android:fillViewport="true"
     android:scrollbars="none">
 
@@ -10,10 +10,10 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        android:paddingLeft="40dp"
-        android:paddingRight="40dp"
-        android:paddingTop="32dp"
-        android:paddingBottom="40dp">
+        android:paddingLeft="36dp"
+        android:paddingRight="36dp"
+        android:paddingTop="36dp"
+        android:paddingBottom="48dp">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -32,16 +32,17 @@
                     android:layout_height="wrap_content"
                     android:text="刷新率控制"
                     android:textColor="#E6E0E9"
-                    android:textSize="26sp"
-                    android:textStyle="bold" />
+                    android:textSize="25sp"
+                    android:textStyle="bold"
+                    android:letterSpacing="0.02" />
 
                 <TextView
                     android:id="@+id/tv_device"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginTop="4dp"
+                    android:layout_marginTop="6dp"
                     android:text="OnePlus Pad 2 Pro · OPD2413"
-                    android:textColor="#938F99"
+                    android:textColor="#A09BA8"
                     android:textSize="12sp" />
             </LinearLayout>
 
@@ -49,31 +50,49 @@
                 android:id="@+id/tv_perm"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:background="@drawable/bg_status_pill"
+                android:paddingLeft="16dp"
+                android:paddingRight="16dp"
+                android:paddingTop="8dp"
+                android:paddingBottom="8dp"
                 android:text="检测中…"
-                android:textColor="#FF7A45"
+                android:textColor="#FFB020"
                 android:textSize="12sp" />
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
+            android:layout_marginTop="26dp"
             android:background="@drawable/bg_card"
             android:orientation="vertical"
-            android:padding="24dp">
-
-            <TextView
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:text="当前实际刷新率"
-                android:textColor="#938F99"
-                android:textSize="11sp"
-                android:letterSpacing="0.12" />
+            android:padding="26dp">
 
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="6dp"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <View
+                    android:layout_width="8dp"
+                    android:layout_height="8dp"
+                    android:background="@drawable/bg_dot" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginLeft="10dp"
+                    android:text="当前实际刷新率"
+                    android:textColor="#A09BA8"
+                    android:textSize="11sp"
+                    android:letterSpacing="0.12" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
                 android:orientation="horizontal"
                 android:gravity="bottom">
 
@@ -83,17 +102,17 @@
                     android:layout_height="wrap_content"
                     android:text="--"
                     android:textColor="#D0BCFF"
-                    android:textSize="62sp"
+                    android:textSize="64sp"
                     android:textStyle="bold"
                     android:includeFontPadding="false" />
 
                 <TextView
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginLeft="8dp"
-                    android:layout_marginBottom="10dp"
+                    android:layout_marginLeft="10dp"
+                    android:layout_marginBottom="12dp"
                     android:text="Hz"
-                    android:textColor="#938F99"
+                    android:textColor="#A09BA8"
                     android:textSize="18sp" />
             </LinearLayout>
 
@@ -101,7 +120,7 @@
                 android:id="@+id/tv_summary"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="10dp"
+                android:layout_marginTop="14dp"
                 android:text="活动 -- Hz  ·  闲时 -- Hz"
                 android:textColor="#CAC4D0"
                 android:textSize="13sp" />
@@ -110,7 +129,7 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="26dp"
+            android:layout_marginTop="30dp"
             android:text="活动刷新率"
             android:textColor="#E6E0E9"
             android:textSize="15sp"
@@ -119,22 +138,22 @@
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
+            android:layout_marginTop="5dp"
             android:text="滑动、动画、视频播放时的上限"
-            android:textColor="#938F99"
+            android:textColor="#A09BA8"
             android:textSize="12sp" />
 
         <LinearLayout
             android:id="@+id/group_active"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:orientation="horizontal" />
 
         <TextView
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="26dp"
+            android:layout_marginTop="28dp"
             android:text="闲时刷新率"
             android:textColor="#E6E0E9"
             android:textSize="15sp"
@@ -144,36 +163,36 @@
             android:id="@+id/tv_idle_hint"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginTop="3dp"
+            android:layout_marginTop="5dp"
             android:text="静止无操作时的下限 · 系统只支持 50 / 60 两档"
-            android:textColor="#938F99"
+            android:textColor="#A09BA8"
             android:textSize="12sp" />
 
         <LinearLayout
             android:id="@+id/group_idle"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="12dp"
+            android:layout_marginTop="16dp"
             android:orientation="horizontal" />
 
         <TextView
             android:id="@+id/btn_apply"
             android:layout_width="match_parent"
-            android:layout_height="52dp"
-            android:layout_marginTop="30dp"
+            android:layout_height="56dp"
+            android:layout_marginTop="34dp"
             android:background="@drawable/bg_btn_primary"
             android:gravity="center"
             android:text="应用设置"
             android:textColor="#381E72"
-            android:textSize="16sp"
+            android:textSize="17sp"
             android:textStyle="bold" />
 
         <TextView
             android:id="@+id/btn_lock"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="10dp"
-            android:background="@drawable/bg_btn_secondary"
+            android:layout_height="52dp"
+            android:layout_marginTop="16dp"
+            android:background="@drawable/bg_btn_accent"
             android:gravity="center"
             android:text="保持静止 60Hz：关"
             android:textColor="#CAC4D0"
@@ -182,8 +201,8 @@
         <TextView
             android:id="@+id/btn_acc"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="10dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/bg_btn_secondary"
             android:gravity="center"
             android:text="无障碍监听：检测中…"
@@ -193,24 +212,24 @@
         <TextView
             android:id="@+id/btn_whitelist"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
-            android:layout_marginTop="10dp"
+            android:layout_height="50dp"
+            android:layout_marginTop="12dp"
             android:background="@drawable/bg_btn_secondary"
             android:gravity="center"
-            android:text="跳过校准的应用：0"
+            android:text="需要校准的应用：全部"
             android:textColor="#CAC4D0"
             android:textSize="14sp" />
 
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="10dp"
+            android:layout_marginTop="12dp"
             android:orientation="horizontal">
 
             <TextView
                 android:id="@+id/btn_recalc"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="50dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_btn_secondary"
                 android:gravity="center"
@@ -219,13 +238,13 @@
                 android:textSize="14sp" />
 
             <View
-                android:layout_width="10dp"
+                android:layout_width="12dp"
                 android:layout_height="1dp" />
 
             <TextView
                 android:id="@+id/btn_default"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="50dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_btn_secondary"
                 android:gravity="center"
@@ -234,13 +253,13 @@
                 android:textSize="14sp" />
 
             <View
-                android:layout_width="10dp"
+                android:layout_width="12dp"
                 android:layout_height="1dp" />
 
             <TextView
                 android:id="@+id/btn_perm"
                 android:layout_width="0dp"
-                android:layout_height="48dp"
+                android:layout_height="50dp"
                 android:layout_weight="1"
                 android:background="@drawable/bg_btn_secondary"
                 android:gravity="center"
@@ -254,10 +273,10 @@
             android:id="@+id/tv_hint"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
+            android:layout_marginTop="22dp"
             android:text="通过 Shizuku 调用系统 shell 修改 settings，无需 root。"
-            android:textColor="#49454F"
+            android:textColor="#9E99A6"
             android:textSize="11sp"
-            android:lineSpacingExtra="3dp" />
+            android:lineSpacingExtra="4dp" />
     </LinearLayout>
 </ScrollView>

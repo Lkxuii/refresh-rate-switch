@@ -25,19 +25,92 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_marginTop="8dp"
-        android:gravity="end|center_vertical"
-        android:orientation="horizontal">
+        android:layout_marginTop="12dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <TextView
+            android:id="@+id/btn_select_all"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:background="@drawable/bg_chip"
+            android:gravity="center"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="全选"
+            android:textColor="#D0BCFF"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/btn_invert"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginLeft="8dp"
+            android:background="@drawable/bg_chip"
+            android:gravity="center"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="反选"
+            android:textColor="#D0BCFF"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/btn_clear_sel"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:layout_marginLeft="8dp"
+            android:background="@drawable/bg_chip"
+            android:gravity="center"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:text="清空"
+            android:textColor="#D0BCFF"
+            android:textSize="13sp" />
+
+        <TextView
+            android:id="@+id/tv_sel_count"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:layout_marginLeft="8dp"
+            android:gravity="end"
+            android:text="已选 0"
+            android:textColor="#A09BA8"
+            android:textSize="12sp" />
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="10dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <CheckBox
+            android:id="@+id/cb_selected_only"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="只看已选"
+            android:textColor="#CAC4D0"
+            android:textSize="13sp" />
 
         <CheckBox
             android:id="@+id/cb_system"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_marginLeft="16dp"
             android:text="显示系统应用"
             android:textColor="#CAC4D0"
             android:textSize="13sp" />
-
     </LinearLayout>
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp"
+        android:text="不选任何应用时，对所有应用校准"
+        android:textColor="#938F99"
+        android:textSize="12sp" />
 
     <ListView
         android:id="@+id/lv_apps"

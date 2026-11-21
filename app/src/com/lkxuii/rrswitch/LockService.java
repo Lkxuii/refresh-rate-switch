@@ -114,17 +114,23 @@ public class LockService extends Service {
         return START_STICKY;
     }
 
-    /** 当前应用是否应跳过校准：白名单命中，或识别为游戏。 */
+    /**
+     * 当前应用是否应跳过校准。
+     * 规则：
+     * 1. 游戏永远跳过（SF 负载高）
+     * 2. 「需要校准」列表留空 → 全部校准；非空 → 只校准列表内的
+     */
     private boolean shouldSkipTuning() {
         String pkg = currentPkg();
         if (pkg == null || pkg.isEmpty()) return false;
+        if (isGame(pkg)) return true;
         try {
-            java.util.Set<String> wl = getSharedPreferences("rr", MODE_PRIVATE)
-                    .getStringSet("whitelist", java.util.Collections.<String>emptySet());
-            if (wl.contains(pkg)) return true;
+            java.util.Set<String> need = getSharedPreferences("rr", MODE_PRIVATE)
+                    .getStringSet("needlist", java.util.Collections.<String>emptySet());
+            if (!need.isEmpty() && !need.contains(pkg)) return true;
         } catch (Throwable ignored) {
         }
-        return isGame(pkg);
+        return false;
     }
 
     /** 判定是否为游戏。游戏期间 SF 负载高，不做定时校准以免加剧风险。 */

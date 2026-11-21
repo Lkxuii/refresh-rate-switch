@@ -26,8 +26,23 @@ public class AppSwitchService extends AccessibilityService {
         if (pkg.equals(lastPkg)) return;
         lastPkg = pkg;
         sCurrentPkg = pkg;
-        // 应用切换是状态最易失效的时机，强制重写
-        RrApply.apply(true);
+        // 应用切换是状态最易失效的时机，强制重写。
+        // 「需要校准」列表留空 → 全部校准；非空 → 只校准列表内的应用。
+        if (shouldCalibrate(pkg)) RrApply.apply(true);
+    }
+
+    /**
+     * 该应用是否需要校准。
+     * needlist 留空 → 全部需要；非空 → 仅在列表内才需要。
+     */
+    private boolean shouldCalibrate(String pkg) {
+        try {
+            java.util.Set<String> need = getSharedPreferences("rr", MODE_PRIVATE)
+                    .getStringSet("needlist", java.util.Collections.<String>emptySet());
+            if (!need.isEmpty() && !need.contains(pkg)) return false;
+        } catch (Throwable ignored) {
+        }
+        return true;
     }
 
     @Override

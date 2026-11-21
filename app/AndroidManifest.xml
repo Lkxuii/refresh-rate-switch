@@ -2,10 +2,14 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     package="com.lkxuii.rrswitch"
-    android:versionCode="15"
-    android:versionName="2.4">
+    android:versionCode="16"
+    android:versionName="2.5">
 
     <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
+
+    <!-- Android 11+ 包可见性：必须声明才能扫描到全机应用（否则只能看到自己和 queries 里的包）。
+         这是普通权限，安装即生效、无需用户手动授权；本 App 不上架 Play，不涉及商店政策限制。 -->
+    <uses-permission android:name="android.permission.QUERY_ALL_PACKAGES" />
 
     <!-- Android 11+ 包可见性：不声明则无法访问 Shizuku 管理器的 provider -->
     <queries>
