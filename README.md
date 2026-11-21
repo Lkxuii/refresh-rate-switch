@@ -69,7 +69,7 @@ java.lang.IllegalArgumentException: You cannot keep your settings in the secure 
 ## 构建
 
 ```bash
-git clone <repo>
+git clone git@github.com:Lkxuii/refresh-rate-switch.git
 cd refresh-rate-switch
 bash build.sh
 # 产物：out/rrswitch.apk
