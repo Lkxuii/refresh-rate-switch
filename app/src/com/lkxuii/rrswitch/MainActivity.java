@@ -245,8 +245,13 @@ public class MainActivity extends Activity {
         if (shizukuReady()) {
             // floor 是开关语义：0 → 50Hz，非 0 → 固定 60Hz，不能直接填 idle 值
             final int floorVal = idleI <= 50 ? 0 : 60;
+            // 关键：先写 0 再写目标值，强制产生一次值变化。
+            // OPPO 服务靠 Settings 变化回调工作，写相同值不会触发，
+            // 会导致"设置值没变但状态丢了"时点了应用没反应。
             String out = exec("settings put system " + K_PEAK + " " + activeI
                     + "; settings put system " + K_MIN + " " + idleI
+                    + "; settings put global " + K_FLOOR + " 0"
+                    + "; sleep 0.2"
                     + "; settings put global " + K_FLOOR + " " + floorVal
                     + "; echo __DONE__");
             return out.contains("__DONE__");
@@ -267,7 +272,10 @@ public class MainActivity extends Activity {
             if (!p2) p2 = putSystemRaw(K_MIN, String.valueOf(idleI));
 
             try {
-                Settings.Global.putInt(getContentResolver(), K_FLOOR, idleI <= 50 ? 0 : 60);
+                int floorVal = idleI <= 50 ? 0 : 60;
+                // 同 shell 路径：先写 0 强制制造变化，再写目标值
+                Settings.Global.putInt(getContentResolver(), K_FLOOR, 0);
+                Settings.Global.putInt(getContentResolver(), K_FLOOR, floorVal);
                 g = true;
             } catch (Throwable t) {
                 lastError = "Global:" + t.getClass().getSimpleName();
@@ -339,13 +347,26 @@ public class MainActivity extends Activity {
 
     private void render(float live, float peak, float min, int floor) {
         tvLive.setText(live > 0 ? String.valueOf(Math.round(live)) : "--");
-        String p = peak > 0 ? String.valueOf(Math.round(peak)) : "--";
-        // 闲时真实档位由 floor 决定，不看 min_refresh_rate
-        String m = floor == 0 ? "50" : "60";
-        tvSummary.setText("设定 活动 " + p + " / 闲时 " + m + "  ·  floor " + floor);
+        // 小字固定显示用户设定的目标值，与实际值不一致时正是"需要重新应用"的信号
+        tvSummary.setText("设定 活动 " + (int) activeRate
+                + " / 闲时 " + (int) idleRate + "  ·  floor " + floor);
     }
 
     private void loadSettings() {
+        // 优先用用户上次保存的意图，而不是当前系统值。
+        // 否则系统状态被外部改写后重开 App，会"跟随"系统，用户点应用也恢复不了。
+        final android.content.SharedPreferences sp = getSharedPreferences("rr", MODE_PRIVATE);
+        final float sa = sp.getFloat("active", -1f);
+        final float si = sp.getFloat("idle", -1f);
+        if (sa > 0 && si > 0) {
+            activeRate = nearest(sa);
+            idleRate = si <= 50 ? 50f : 60f;
+            rebuildChips();
+            updateSummary();
+            pollAsync();
+            return;
+        }
+
         new Thread(new Runnable() {
             @Override public void run() {
                 final float p = readPeak();
@@ -375,6 +396,8 @@ public class MainActivity extends Activity {
         final float a = activeRate;
         final float i = idleRate;
         if (writeAll(a, i)) {
+            getSharedPreferences("rr", MODE_PRIVATE).edit()
+                    .putFloat("active", a).putFloat("idle", i).apply();
             toast("已应用：活动 " + (int) a + "Hz / 闲时 " + (int) i + "Hz");
             ui.postDelayed(new Runnable() {
                 @Override public void run() { pollAsync(); }
@@ -401,6 +424,7 @@ public class MainActivity extends Activity {
                 return;
             }
         }
+        getSharedPreferences("rr", MODE_PRIVATE).edit().clear().apply();
         activeRate = 144f;
         idleRate = 50f;
         rebuildChips();
