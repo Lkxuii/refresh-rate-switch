@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="com.lkxuii.rrswitch"
+    android:versionCode="2"
+    android:versionName="1.1">
+
+    <uses-sdk android:minSdkVersion="26" android:targetSdkVersion="35" />
+
+    <!-- Android 11+ 包可见性：不声明则无法访问 Shizuku 管理器的 provider -->
+    <queries>
+        <package android:name="moe.shizuku.privileged.api" />
+    </queries>
+
+    <!-- Shizuku 授权所需（provider AAR 自带的清单声明，手工构建需自行合并） -->
+    <uses-permission android:name="moe.shizuku.manager.permission.API_V23" />
+    <!-- 备用通道：adb 一次性授权后可直接写 Settings，不依赖 Shizuku -->
+    <uses-permission android:name="android.permission.WRITE_SECURE_SETTINGS" />
+    <!-- 写 Settings.System（peak/min_refresh_rate）必需，需在系统设置页手动开启 -->
+    <uses-permission android:name="android.permission.WRITE_SETTINGS" />
+
+    <application
+        android:label="刷新率切换"
+        android:icon="@drawable/ic_launcher"
+        android:allowBackup="true"
+        android:supportsRtl="true"
+        android:resizeableActivity="true"
+        android:theme="@style/AppTheme">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:resizeableActivity="true"
+            android:configChanges="orientation|screenSize|screenLayout|smallestScreenSize|keyboardHidden">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="com.lkxuii.rrswitch.shizuku"
+            android:multiprocess="false"
+            android:enabled="true"
+            android:exported="true" />
+
+        <meta-data
+            android:name="moe.shizuku.client.V3_SUPPORT"
+            android:value="true" />
+
+    </application>
+</manifest>

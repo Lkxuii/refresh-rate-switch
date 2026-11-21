@@ -1,0 +1,15 @@
+# 构建产物
+out/
+*.apk
+*.jks
+*.keystore
+
+# 自动下载的依赖
+sdk/
+shizuku-lib/
+*.zip
+*.aar
+
+# 系统文件
+.DS_Store
+Thumbs.db
