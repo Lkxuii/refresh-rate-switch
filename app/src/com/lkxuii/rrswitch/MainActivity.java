@@ -155,6 +155,7 @@ public class MainActivity extends Activity {
             }
         });
 
+        lockRunning = isLockServiceRunning();
         ensureShizukuBinder();
         rebuildChips();
         updateSummary();
@@ -527,6 +528,21 @@ public class MainActivity extends Activity {
             toast("已开启锁定：静止保持 60Hz，活动仍走高刷");
         }
         updateLockUi();
+    }
+
+    /** 检查锁定服务是否在运行，用于 App 重启后同步按钮状态 */
+    private boolean isLockServiceRunning() {
+        try {
+            android.app.ActivityManager am =
+                    (android.app.ActivityManager) getSystemService(ACTIVITY_SERVICE);
+            if (am == null) return false;
+            for (android.app.ActivityManager.RunningServiceInfo s
+                    : am.getRunningServices(Integer.MAX_VALUE)) {
+                if (s.service.getClassName().equals(LockService.class.getName())) return true;
+            }
+        } catch (Throwable ignored) {
+        }
+        return false;
     }
 
     private void updateLockUi() {
