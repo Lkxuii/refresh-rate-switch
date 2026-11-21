@@ -42,6 +42,7 @@ public class MainActivity extends Activity {
     private boolean polling = false;
     private volatile boolean busy = false;
     private String lastError = "";
+    private boolean lockRunning = false;
 
     /** Shizuku.newProcess 在 13.x 被降级为 private，用反射调用 */
     private static Method sNewProcess;
@@ -124,6 +125,9 @@ public class MainActivity extends Activity {
         findViewById(R.id.btn_default).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { restoreDefault(); }
         });
+        findViewById(R.id.btn_lock).setOnClickListener(new View.OnClickListener() {
+            @Override public void onClick(View v) { toggleLock(); }
+        });
         findViewById(R.id.btn_perm).setOnClickListener(new View.OnClickListener() {
             @Override public void onClick(View v) { onPermClick(); }
         });
@@ -154,6 +158,7 @@ public class MainActivity extends Activity {
         ensureShizukuBinder();
         rebuildChips();
         updateSummary();
+        updateLockUi();
         updatePermUi();
     }
 
@@ -499,6 +504,42 @@ public class MainActivity extends Activity {
         } catch (Throwable ignored) {
         }
         openWriteSettingsPage();
+    }
+
+    /** 开关锁定服务。force_pad_floor_fps 的生效状态会被系统覆盖，需要定期重写。 */
+    private void toggleLock() {
+        if (lockRunning) {
+            stopService(new android.content.Intent(this, LockService.class));
+            lockRunning = false;
+            toast("已停止锁定，闲时可能回到 50Hz");
+        } else {
+            if (idleRate <= 50) {
+                toast("闲时为 50Hz 时无需锁定");
+                return;
+            }
+            if (!hasAnyChannel()) {
+                toast("请先授权 Shizuku");
+                updatePermUi();
+                return;
+            }
+            if (android.os.Build.VERSION.SDK_INT >= 33
+                    && checkSelfPermission(android.Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(
+                        new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 300);
+            }
+            startForegroundService(new android.content.Intent(this, LockService.class));
+            lockRunning = true;
+            toast("已开启锁定（常驻通知，每 20 秒校准）");
+        }
+        updateLockUi();
+    }
+
+    private void updateLockUi() {
+        TextView btn = (TextView) findViewById(R.id.btn_lock);
+        if (btn == null) return;
+        btn.setText(lockRunning ? "保持锁定：开（点此关闭）" : "保持锁定：关");
+        btn.setTextColor(lockRunning ? 0xFF4CD07D : 0xFFB0B0BA);
     }
 
     /** 跳转系统的"允许修改系统设置"开关页（AppOps 权限，adb 改不动，只能走 UI） */

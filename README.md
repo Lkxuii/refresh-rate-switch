@@ -114,6 +114,20 @@ ADB=/path/to/adb bash test.sh
 
 > **重装 App 后 Shizuku 授权会失效**（uid 变化），需要重新点一次「授权 Shizuku」。
 
+## 为什么需要「保持锁定」
+
+`force_pad_floor_fps` 的生效状态**不是永久的**。实测以下情况会让 idle 掉回 50Hz：
+
+- 从视频应用退出后（视频会请求 144Hz，退出时状态被覆盖）
+- 切换应用、系统策略重算
+- 设备重启
+
+即便设置值 `floor=60`、服务内部 `mLockRate=1` 都还在，实际刷新率仍可能是 50Hz——这就是
+「设置看着对但就是不生效」的原因。
+
+所以 App 提供**保持锁定**：开启后启动前台服务，每 20 秒重写一次该设置强制刷新状态。
+代价是通知栏常驻一条「刷新率已锁定」。不需要时可以随时关掉。
+
 ## 已知限制
 
 - **闲时最高只能 60Hz**。ColorOS 的 TouchIdle 阈值写死在 `/my_product/etc/oplus_vrr_config.json`（`"hw_lowest_rate": 50`），该文件在只读分区、`root:root 644`，shell 权限无法修改。已尝试并通过实测排除的路径：`min_refresh_rate`、`cmd display set-user-preferred-display-mode`、`oplus_refreshrate_override`、`oplus_customize_screen_refresh_rate`、`dumpsys dynamicvsync`、`oplus_vrr_service` 命令入口。
